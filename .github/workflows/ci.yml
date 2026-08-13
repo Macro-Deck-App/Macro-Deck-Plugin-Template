@@ -1,0 +1,56 @@
+name: CI
+
+# Proves the template still builds, tests and packs. Runs on every pull request and on main, where it
+# gates the publish workflow through the same steps.
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+
+jobs:
+  build:
+    name: Build, test and pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # Nothing gets published out of a build that warns, the same gate the Macro Deck repository uses.
+      - name: Build
+        run: dotnet build MacroDeck.PluginTemplate.slnx -c Release -warnaserror
+
+      - name: Test
+        run: dotnet test MacroDeck.PluginTemplate.slnx -c Release --no-build
+
+      # The version is not passed in: it lives in packaging/MacroDeck.Plugin.Templates.csproj, so a
+      # release is a version bump in that file and nothing else.
+      - name: Pack template package
+        run: dotnet pack packaging/MacroDeck.Plugin.Templates.csproj -c Release -o ${{ runner.temp }}/packages
+
+      # Uploaded even for a run that will not publish, so the exact artifact a commit produced can be
+      # downloaded and inspected from the run.
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: template-package
+          path: ${{ runner.temp }}/packages/*.nupkg
+          retention-days: 14
+          if-no-files-found: error

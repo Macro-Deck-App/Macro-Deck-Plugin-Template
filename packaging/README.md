@@ -1,0 +1,69 @@
+# Packaging
+
+`MacroDeck.Plugin.Templates.csproj` packs the repository root as a `dotnet new` template package. It is
+deliberately outside `MacroDeck.PluginTemplate.slnx`: `dotnet build` at the root builds the plugin, not
+the package that ships it.
+
+The repository root *is* the template content. What `dotnet new macrodeck-plugin` writes out is exactly
+what a clone of this repository contains, minus what `.template.config/template.json` excludes
+(`packaging/`, `.github/`, `local-feed/*.nupkg`, build output). So a change to the template is an
+ordinary change to the plugin in `src/` - there is no second copy to keep in sync.
+
+## Releasing
+
+The version lives in this project's `<Version>` property, and nothing else. A release is:
+
+1. Bump `<Version>`.
+2. Merge to `main`.
+
+`.github/workflows/publish.yml` builds, tests, packs and pushes to nuget.org on every push to `main`,
+authenticated through [trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+rather than a stored API key - the `NUGET_USER` secret is the nuget.org account that owns the policy, and
+the policy names `publish.yml`. The push uses `--skip-duplicate`, so a push to `main` that did not bump
+the version re-packs the same package and publishes nothing.
+
+Moving the `NuGet/login` step into another workflow file would silently need a policy of its own; keep
+it here.
+
+## Building the package locally
+
+```bash
+dotnet pack packaging/MacroDeck.Plugin.Templates.csproj -o ./artifacts
+```
+
+```bash
+dotnet new install ./artifacts/MacroDeck.Plugin.Templates.<version>.nupkg
+```
+
+```bash
+dotnet new macrodeck-plugin -n Acme.LightControl --pluginId com.acme.light-control --pluginName "Acme Light Control"
+```
+
+`dotnet new uninstall MacroDeck.Plugin.Templates` removes it again. Reinstalling after a repack needs
+the uninstall first - the same version installed twice is not refreshed in place.
+
+## Keeping the template a template
+
+Anything added to the repository root ships to everyone who runs `dotnet new macrodeck-plugin`, so:
+
+- **Keep it minimal.** A capability added "to show how" is a capability every generated plugin then has
+  to delete. Demonstrations belong in the
+  [sample plugins repository](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins).
+- **Exclude repository-only files.** A new root-level file that is about maintaining the template rather
+  than writing a plugin needs an entry in `.template.config/template.json`.
+- **Keep renaming working.** `sourceName` is `MacroDeck.PluginTemplate`, `pluginId` replaces
+  `app.macro-deck.template` and `pluginName` replaces `Macro Deck Plugin Template`. Anything that
+  hardcodes one of those strings has to keep matching.
+- **Do not link to repository-only files by relative path** from `README.md` or `AGENTS.md`: both ship
+  into generated projects, where such a link is dead. Link to the file on GitHub instead.
+
+## What to check after changing the template
+
+`dotnet new` renaming is driven by `sourceName` (`MacroDeck.PluginTemplate`) plus the `pluginId` and
+`pluginName` parameters, so anything that hardcodes those strings has to keep matching. After a change,
+generate a project and confirm:
+
+- the project, test project, solution file and namespaces all carry the new name,
+- `manifest.json` carries the new `id`, `name` and per-platform `executable` values,
+- `dotnet build` and `dotnet test` pass in the generated project,
+- no repository-only file (`packaging/`, `.github/`, packed SDK packages) leaked into the output.

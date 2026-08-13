@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Macro Deck",
+  "classifications": [ "Macro Deck", "Plugin", "Console" ],
+  "identity": "MacroDeck.Plugin.Template.CSharp",
+  "name": "Macro Deck plugin",
+  "shortName": "macrodeck-plugin",
+  "description": "A minimal out-of-process Macro Deck 3 plugin: one integration that starts, registers and does nothing else, plus a test project and the developer tooling wired up.",
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "sourceName": "MacroDeck.PluginTemplate",
+  "defaultName": "MacroDeckPlugin",
+  "preferNameDirectory": true,
+  "symbols": {
+    "pluginId": {
+      "type": "parameter",
+      "datatype": "string",
+      "description": "The manifest id: reverse-domain, lowercase, at least two dot-joined kebab segments.",
+      "defaultValue": "com.example.my-plugin",
+      "replaces": "app.macro-deck.template"
+    },
+    "pluginName": {
+      "type": "parameter",
+      "datatype": "string",
+      "description": "The display name Macro Deck shows for the plugin.",
+      "defaultValue": "My Plugin",
+      "replaces": "Macro Deck Plugin Template"
+    },
+    "skipRestore": {
+      "type": "parameter",
+      "datatype": "bool",
+      "description": "Skip the automatic restore after the project is created.",
+      "defaultValue": "false"
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "exclude": [
+            ".git/**",
+            ".github/**",
+            ".idea/**",
+            ".vs/**",
+            "packaging/**",
+            "**/bin/**",
+            "**/obj/**",
+            "local-feed/*.nupkg",
+            "local-feed/*.snupkg",
+            "conformance.md",
+            "*.macroDeckPlugin"
+          ],
+          "copyOnly": [
+            "**/*.svg",
+            "**/.gitkeep"
+          ]
+        }
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    { "path": "src/MacroDeck.PluginTemplate/MacroDeck.PluginTemplate.csproj" }
+  ],
+  "postActions": [
+    {
+      "id": "restore",
+      "condition": "(!skipRestore)",
+      "description": "Restore NuGet packages required by this project.",
+      "manualInstructions": [ { "text": "Run 'dotnet restore'" } ],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ]
+}
