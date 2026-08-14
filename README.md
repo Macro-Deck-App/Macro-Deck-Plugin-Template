@@ -14,8 +14,12 @@ flow, a virtual profile.
 Either install the template and generate a project:
 
 ```bash
-dotnet new install MacroDeck.Plugin.Templates::3.0.0-preview.2
+dotnet new install MacroDeck.Plugin.Templates@*-*
 ```
+
+`@*-*` installs the newest published version. The floating form is what you want while the 3.0
+template is in preview: `dotnet new install` picks stable versions by default, and there is no stable
+release yet.
 
 ```bash
 dotnet new macrodeck-plugin -n Acme.LightControl --pluginId com.acme.light-control --pluginName "Acme Light Control"
@@ -67,11 +71,8 @@ real supervisor does. Ctrl-C runs the documented shutdown sequence.
 
 ## Building against a local SDK build
 
-> **Until `3.0.0-preview.2` is on nuget.org, this is not optional.** The template uses SDK surface that
-> landed after `3.0.0-preview.1`, so a plain `dotnet build` fails until that release is published. Build
-> against a locally packed SDK as described here until then.
-
-The template tracks the SDK's *published* packages. While a change is still unreleased, pack the SDK
+The template tracks the SDK's *published* packages and floats to the newest one, so a plain
+`dotnet build` always resolves the latest release. While a change is still unreleased, pack the SDK
 from a Macro Deck 3 checkout into this repository's `local-feed/` and build against that version:
 
 ```bash
@@ -86,9 +87,9 @@ dotnet build -p:MacroDeckSdkVersion=3.0.0-local.1
 version for every Macro Deck package at once (see `Directory.Packages.props`). Nothing in the
 repository pins the local version, so a plain `dotnet build` goes back to the published one.
 
-Pick a version that cannot collide with a real release - `3.0.0-local.N` rather than reusing
-`3.0.0-preview.2`, which would put a hand-built package into the global NuGet cache under the name of
-a published one.
+Pick a version that cannot collide with a real release - `3.0.0-local.N` rather than reusing a
+published preview version, which would put a hand-built package into the global NuGet cache under the
+name of a published one.
 
 ## How a plugin is put together
 

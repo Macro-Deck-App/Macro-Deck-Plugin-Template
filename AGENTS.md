@@ -247,9 +247,10 @@ it after any change to capability shape, cancellation handling or the manifest, 
 check going from pass to fail as a blocking regression. Most checks `SKIP` until the plugin declares
 capabilities.
 
-While the SDK surface this template uses is unreleased, every command above needs
-`-p:MacroDeckSdkVersion=<version>` against a locally packed SDK in `local-feed/` - see "Building against
-a local SDK build" in [README.md](README.md).
+The Macro Deck packages float to the newest published version, so the commands above need no version
+argument. Only to test against SDK surface that is not published yet, pack it into `local-feed/` and
+pass `-p:MacroDeckSdkVersion=<version>` - see "Building against a local SDK build" in
+[README.md](README.md).
 
 Working in the template repository itself rather than in a plugin generated from it? Changing its shape
 (files, names, `.template.config/template.json`, `packaging/`) also needs a generated-project check -
