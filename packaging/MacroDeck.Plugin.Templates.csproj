@@ -34,7 +34,7 @@
         <!-- PackagePath is set explicitly: the content lives above this project directory, so NuGet
              cannot infer a relative path for it and would otherwise flatten the whole tree. -->
         <Content Include="..\**\*"
-                 Exclude="..\.git\**;..\**\bin\**;..\**\obj\**;..\local-feed\*.nupkg;..\local-feed\*.snupkg;..\packaging\**;..\LICENSE;..\*.macroDeckPlugin"
+                 Exclude="..\.git\**;..\**\bin\**;..\**\obj\**;..\**\.macrodeck-dev-state\**;..\**\.DS_Store;..\local-feed\*.nupkg;..\local-feed\*.snupkg;..\packaging\**;..\LICENSE;..\*.macroDeckPlugin"
                  Pack="true"
                  PackagePath="content\%(RecursiveDir)%(Filename)%(Extension)" />
         <!-- Separate because NuGet reads an extensionless PackagePath as a directory: the wildcard's

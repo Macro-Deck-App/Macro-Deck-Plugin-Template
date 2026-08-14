@@ -51,6 +51,9 @@ Anything added to the repository root ships to everyone who runs `dotnet new mac
   [sample plugins repository](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins).
 - **Exclude repository-only files.** A new root-level file that is about maintaining the template rather
   than writing a plugin needs an entry in `.template.config/template.json`.
+- **Exclude local credentials twice.** `.macrodeck-dev-state/` must stay out of both the package glob in
+  `MacroDeck.Plugin.Templates.csproj` and generated output in `.template.config/template.json`; Gitignore
+  alone does not stop an untracked credential from entering the `.nupkg`.
 - **Keep renaming working.** `sourceName` is `MacroDeck.PluginTemplate`, `pluginId` replaces
   `app.macro-deck.template` and `pluginName` replaces `Macro Deck Plugin Template`. Anything that
   hardcodes one of those strings has to keep matching.
@@ -65,5 +68,7 @@ generate a project and confirm:
 
 - the project, test project, solution file and namespaces all carry the new name,
 - `manifest.json` carries the new `id`, `name` and per-platform `executable` values,
+- `Properties/launchSettings.json` exists with only the secret-free **Macro Deck - Real Host** profile,
+- no `.run/` directory or `.macrodeck-dev-state/` content was emitted,
 - `dotnet build` and `dotnet test` pass in the generated project,
 - no repository-only file (`packaging/`, `.github/`, packed SDK packages) leaked into the output.
