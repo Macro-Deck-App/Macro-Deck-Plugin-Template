@@ -272,8 +272,9 @@ manifest; sign earlier and the digest will not match.
 
 - Work on a branch, not directly on `main`. Use `feature/`, `fix/`, `refactor/`, `chore/`, `docs/` or
   `ci/` with a short kebab-case description, and an issue number where one exists.
-- A push to `main` publishes the template package if `packaging/MacroDeck.Plugin.Templates.csproj`
-  carries a version that is not on nuget.org yet. Bump it deliberately.
+- Publishing the template package requires a pushed semantic-version tag such as
+  `v3.0.0-preview.3`. The publish workflow removes the leading `v` and uses the rest as the NuGet
+  package version. A push to `main` alone never publishes.
 - Keep changes focused; no unrelated reformatting.
 - Do not push or open a pull request unless asked.
 - Do not add AI attribution or co-author trailers.

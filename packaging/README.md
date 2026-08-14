@@ -11,16 +11,17 @@ ordinary change to the plugin in `src/` - there is no second copy to keep in syn
 
 ## Releasing
 
-The version lives in this project's `<Version>` property, and nothing else. A release is:
+The release version comes from a Git tag. A release is:
 
-1. Bump `<Version>`.
-2. Merge to `main`.
+1. Merge the release commit to `main`.
+2. Create and push a semantic-version tag such as `v3.0.0-preview.3`.
 
-`.github/workflows/publish.yml` builds, tests, packs and pushes to nuget.org on every push to `main`,
+`.github/workflows/publish.yml` builds, tests, packs and pushes to nuget.org for tags beginning with `v`
+and a digit. It removes the leading `v`, validates the remaining semantic version and passes it to
+`dotnet pack`, so `v3.0.0-preview.3` publishes package version `3.0.0-preview.3`. The workflow is
 authenticated through [trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
 rather than a stored API key - the `NUGET_USER` secret is the nuget.org account that owns the policy, and
-the policy names `publish.yml`. The push uses `--skip-duplicate`, so a push to `main` that did not bump
-the version re-packs the same package and publishes nothing.
+the policy names `publish.yml`. The push uses `--skip-duplicate` to make retrying a release safe.
 
 Moving the `NuGet/login` step into another workflow file would silently need a policy of its own; keep
 it here.
@@ -28,8 +29,10 @@ it here.
 ## Building the package locally
 
 ```bash
-dotnet pack packaging/MacroDeck.Plugin.Templates.csproj -o ./artifacts
+dotnet pack packaging/MacroDeck.Plugin.Templates.csproj -p:Version=3.0.0-preview.3 -o ./artifacts
 ```
+
+Without `-p:Version`, local and non-release CI builds use `0.0.0-local`.
 
 ```bash
 dotnet new install ./artifacts/MacroDeck.Plugin.Templates.<version>.nupkg
