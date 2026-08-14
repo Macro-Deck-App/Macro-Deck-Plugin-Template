@@ -6,7 +6,7 @@
     <PropertyGroup>
         <PackageId>MacroDeck.Plugin.Templates</PackageId>
         <PackageType>Template</PackageType>
-        <Version Condition="'$(Version)' == ''">3.0.0-preview.2</Version>
+        <Version Condition="'$(Version)' == ''">0.0.0-local</Version>
         <Title>Macro Deck plugin template</Title>
         <Authors>Macro Deck</Authors>
         <Description>`dotnet new macrodeck-plugin` - a minimal out-of-process Macro Deck 3 plugin, with a test project and the developer tooling wired up.</Description>
