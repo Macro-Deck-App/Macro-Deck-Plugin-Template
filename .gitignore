@@ -93,6 +93,9 @@ keys/
 *.user
 *.suo
 
+# Local credentials persisted by the real-host launch profile
+**/.macrodeck-dev-state/
+
 # Test servers
 test-servers/
 

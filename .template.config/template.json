@@ -47,6 +47,8 @@
             "packaging/**",
             "**/bin/**",
             "**/obj/**",
+            "**/.macrodeck-dev-state/**",
+            "**/.DS_Store",
             "local-feed/*.nupkg",
             "local-feed/*.snupkg",
             "conformance.md",

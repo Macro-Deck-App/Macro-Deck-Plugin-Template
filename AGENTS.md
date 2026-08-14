@@ -25,6 +25,7 @@ src/MacroDeck.PluginTemplate/
   manifest.json          identity, icon, per-platform entrypoints
   PluginIntegration.cs   the integration: lifecycle and capability opt-ins
   Assets/icon.svg        the icon the manifest declares
+  Properties/launchSettings.json   the single real-host debug profile
 tests/MacroDeck.PluginTemplate.Tests/
   PluginIntegrationTests.cs   the plugin builds and initializes
 ```
@@ -228,13 +229,10 @@ dotnet build
 dotnet test
 ```
 
-```bash
-macrodeck-plugin run --project src/MacroDeck.PluginTemplate
-```
-
-`run` launches the plugin against a disposable stub host composed exactly like the real supervisor, so it
-needs no Macro Deck installation. Install the CLI once with
-`dotnet tool install --global MacroDeck.Plugin.Cli --prerelease`.
+For an interactive verification, start the installed Macro Deck desktop app and debug the plugin with
+the **Macro Deck - Real Host** `.NET` launch profile. Keep the profile secret-free; supply a first-run
+enrollment token only through the project's local .NET User Secrets and remove it after registration.
+Do not add a second run configuration or a CLI/executable startup path.
 
 ```bash
 macrodeck-plugin test --project src/MacroDeck.PluginTemplate --report markdown --output conformance.md
