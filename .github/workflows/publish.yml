@@ -1,15 +1,14 @@
 name: Publish
 
-# Publishes MacroDeck.Plugin.Templates to nuget.org on every push to main. The version lives in
-# packaging/MacroDeck.Plugin.Templates.csproj, so a release is a version bump in that file: a push that
-# does not change it re-packs the same version and the push is skipped as a duplicate.
+# Publishes MacroDeck.Plugin.Templates to nuget.org when a version tag is pushed. The leading `v` is
+# removed and the rest of the tag becomes the NuGet package version.
 #
 # This file is the only place NuGet/login appears. Trusted publishing validates the workflow file the
 # login step runs in, so the nuget.org policy names publish.yml and nothing else.
 
 on:
   push:
-    branches: [ main ]
+    tags: [ 'v[0-9]*' ]
 
 concurrency:
   group: publish
@@ -25,6 +24,8 @@ jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
+    with:
+      release-tag: ${{ github.ref_name }}
 
   publish:
     name: Publish to NuGet
@@ -69,8 +70,6 @@ jobs:
         with:
           user: ${{ secrets.NUGET_USER }}
 
-      # --skip-duplicate is what makes "publish on every push to main" workable: only a commit that
-      # bumped the version in packaging/MacroDeck.Plugin.Templates.csproj actually publishes anything.
       - name: Push package
         if: ${{ steps.credentials.outputs.configured == 'true' }}
         env:

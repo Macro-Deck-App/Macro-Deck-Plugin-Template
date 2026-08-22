@@ -6,7 +6,7 @@
     <PropertyGroup>
         <PackageId>MacroDeck.Plugin.Templates</PackageId>
         <PackageType>Template</PackageType>
-        <Version Condition="'$(Version)' == ''">3.0.0-preview.2</Version>
+        <Version Condition="'$(Version)' == ''">0.0.0-local</Version>
         <Title>Macro Deck plugin template</Title>
         <Authors>Macro Deck</Authors>
         <Description>`dotnet new macrodeck-plugin` - a minimal out-of-process Macro Deck 3 plugin, with a test project and the developer tooling wired up.</Description>
@@ -34,7 +34,7 @@
         <!-- PackagePath is set explicitly: the content lives above this project directory, so NuGet
              cannot infer a relative path for it and would otherwise flatten the whole tree. -->
         <Content Include="..\**\*"
-                 Exclude="..\.git\**;..\**\bin\**;..\**\obj\**;..\local-feed\*.nupkg;..\local-feed\*.snupkg;..\packaging\**;..\LICENSE;..\*.macroDeckPlugin"
+                 Exclude="..\.git\**;..\**\bin\**;..\**\obj\**;..\**\.macrodeck-dev-state\**;..\**\.DS_Store;..\local-feed\*.nupkg;..\local-feed\*.snupkg;..\packaging\**;..\LICENSE;..\*.macroDeckPlugin"
                  Pack="true"
                  PackagePath="content\%(RecursiveDir)%(Filename)%(Extension)" />
         <!-- Separate because NuGet reads an extensionless PackagePath as a directory: the wildcard's

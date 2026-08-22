@@ -41,12 +41,7 @@ single source of truth and the host reads that file directly, so there is no cod
 ## Requirements
 
 - .NET SDK 10.0
-- For the [full dev loop](#running-against-a-real-host): a running Macro Deck 3 host - either a
-  development host from the [Macro Deck 3 repository](https://github.com/Macro-Deck-App/Macro-Deck-3),
-  or an installed desktop app
-
-You do **not** need Macro Deck installed to build, run or test a plugin - the
-[CLI](#the-developer-cli) runs one against a disposable stub host.
+- A running Macro Deck desktop app for [interactive debugging](#run-and-debug-against-macro-deck)
 
 ## Quick start
 
@@ -58,16 +53,8 @@ dotnet build
 dotnet test
 ```
 
-```bash
-dotnet tool install --global MacroDeck.Plugin.Cli --prerelease
-```
-
-```bash
-macrodeck-plugin run --project src/MacroDeck.PluginTemplate
-```
-
-That launches the plugin against a disposable stub host, composing the environment exactly the way the
-real supervisor does. Ctrl-C runs the documented shutdown sequence.
+Build and tests need no Macro Deck installation. For an interactive session, use the checked-in
+**Macro Deck - Real Host** launch profile after the one-time setup below.
 
 ## Building against a local SDK build
 
@@ -101,6 +88,7 @@ src/MacroDeck.PluginTemplate/
   manifest.json          identity, icon and per-platform entrypoints
   PluginIntegration.cs   the integration: lifecycle and capability opt-ins
   Assets/icon.svg        the icon the manifest declares
+  Properties/launchSettings.json   the shared real-host debug profile
 tests/MacroDeck.PluginTemplate.Tests/
   PluginIntegrationTests.cs   the plugin builds and initializes
 ```
@@ -183,90 +171,95 @@ ids and never the qualified form.
 The [sample plugins](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins) are the worked
 examples for each of these.
 
-## Running against a real host
+## Run and debug against Macro Deck
 
-The plugin registers itself with a running host rather than being launched by it, so the host has to
-be up first. Self-registration only works against a host on the **same machine**: the plugin endpoints
-are local-only by design.
+The project contains exactly one interactive launch profile: **Macro Deck - Real Host**. It launches
+the plugin project directly, so Rider and Visual Studio attach the debugger to plugin code without a
+wrapper or child-process attach. The profile connects in self-registering mode to the installed Macro
+Deck desktop app at `http://127.0.0.1:8193`.
 
-### 1. Start the host and the UI
+For the first run:
 
-From your Macro Deck 3 checkout:
+1. Start Macro Deck.
+2. Open **Developer Tools → Plugin tokens**, create a token and copy it. It is shown only once.
+3. Store the token in the source project's **.NET User Secrets** using one of the methods below. The
+   project is already initialized; do not run `dotnet user-secrets init`.
+4. Select **Macro Deck - Real Host** and start it with **Debug**.
+5. Once enrollment succeeds, remove the token from User Secrets.
 
-```bash
-dotnet run --project host/src/MacroDeckHost
+### Set the token in Rider or Visual Studio
+
+In Rider, right-click `MacroDeck.PluginTemplate` in the Solution Explorer and select
+**Tools → .NET User Secrets**. In Visual Studio, right-click the same source project and select
+**Manage User Secrets**. Do not select the `.Tests` project.
+
+The IDE opens a `secrets.json` file stored in your user profile, outside this repository. Replace its
+contents with:
+
+```json
+{
+  "MacroDeck:Plugin:EnrollmentToken": "<paste the one-time token here>"
+}
 ```
 
-A development host listens on `7193` (public) and `5191` (trusted loopback). An installed desktop app
-uses `8193` instead - use that port below if you are developing against one, and skip to step 3, since
-it brings its own UI.
+Save the file, then start **Macro Deck - Real Host**. After enrollment, reopen `secrets.json` and
+remove the `MacroDeck:Plugin:EnrollmentToken` entry.
 
-Then start the configuration UI, from `ui/angular`:
+### Set the token from a terminal
 
-```bash
-npm install && npm run start
-```
-
-It serves on `http://localhost:4200` and proxies to the host's loopback port. Connections over
-loopback are implicitly admin, so no login is needed in development.
-
-### 2. Create a Developer token
-
-In the UI, go to **Developer Tools → Plugin tokens** and press **Create token**. Copy the plaintext
-value - it is shown once.
-
-### 3. Start the plugin
+From the repository root on macOS or Linux, use the following form. It reads the token without echoing
+it and does not put the value in shell history or process arguments:
 
 ```bash
-dotnet build
-cd src/MacroDeck.PluginTemplate/bin/Debug/net10.0
-
-MACRO_DECK_PLUGIN_MODE=SelfRegistering \
-MACRO_DECK_PLUGIN_HOST_URL=http://127.0.0.1:7193 \
-MACRO_DECK_PLUGIN_ENROLLMENT_TOKEN=<your token> \
-./MacroDeck.PluginTemplate
+project="src/MacroDeck.PluginTemplate/MacroDeck.PluginTemplate.csproj"
+printf "Enrollment token: "
+read -rs md_enrollment_token
+printf '\n'
+printf '{"MacroDeck:Plugin:EnrollmentToken":"%s"}\n' "$md_enrollment_token" |
+  dotnet user-secrets set --project "$project"
+unset md_enrollment_token
 ```
 
-On PowerShell:
+After the first successful profile launch, remove the one-time token:
+
+```bash
+dotnet user-secrets remove "MacroDeck:Plugin:EnrollmentToken" --project "$project"
+```
+
+With PowerShell 7, use the equivalent masked-input form:
 
 ```powershell
-$env:MACRO_DECK_PLUGIN_MODE = "SelfRegistering"
-$env:MACRO_DECK_PLUGIN_HOST_URL = "http://127.0.0.1:7193"
-$env:MACRO_DECK_PLUGIN_ENROLLMENT_TOKEN = "<your token>"
-.\MacroDeck.PluginTemplate.exe
+$project = "src/MacroDeck.PluginTemplate/MacroDeck.PluginTemplate.csproj"
+$token = Read-Host "Enrollment token" -MaskInput
+@{ "MacroDeck:Plugin:EnrollmentToken" = $token } |
+  ConvertTo-Json -Compress |
+  dotnet user-secrets set --project $project
+Remove-Variable token
 ```
 
-Run it from the build output directory: the SDK reads `manifest.json` from the content root, and the
-manifest's icon path is resolved against it. `macrodeck-plugin run --host-url ... --mode
-self-registering --enrollment-token ...` does the same thing without the manual environment.
+Then remove it after enrollment:
 
-### Later runs
-
-The enrollment token is only needed the first time. The plugin exchanges it for a secret and persists
-that, so afterwards this is enough:
-
-```bash
-MACRO_DECK_PLUGIN_MODE=SelfRegistering \
-MACRO_DECK_PLUGIN_HOST_URL=http://127.0.0.1:7193 \
-./MacroDeck.PluginTemplate
+```powershell
+dotnet user-secrets remove "MacroDeck:Plugin:EnrollmentToken" --project $project
 ```
 
-The secret is stored per plugin id under the platform state directory:
+The profile persists the exchanged plugin credential under
+`src/MacroDeck.PluginTemplate/.macrodeck-dev-state/`, which is ignored by Git and excluded from the
+template package. Later profile launches reuse that credential. The User Secrets id is renamed with a
+generated project, so each plugin gets a separate local secret store.
 
-| Platform | Location |
-| --- | --- |
-| Windows | `%LOCALAPPDATA%\MacroDeck\plugins\<pluginId>\credentials.json` |
-| macOS | `~/Library/Application Support/MacroDeck/plugins/<pluginId>/credentials.json` |
-| Linux | `$XDG_STATE_HOME/macro-deck/plugins/<pluginId>/credentials.json` |
-
-Delete that file to force a fresh enrollment. `MACRO_DECK_PLUGIN_STATE_DIRECTORY` overrides the
-location. Anything your plugin itself writes belongs under `MACRO_DECK_PLUGIN_DATA_DIRECTORY` - it is
-the only writable location that survives an update or a rollback.
+User Secrets are local-only but not encrypted. Never put the enrollment token in `launchSettings.json`,
+a shared IDE configuration, a literal command argument or a commit. If you intentionally clear the
+local state, create a fresh token and repeat the User Secrets step. Self-registration only works
+against a host on the same machine. See the official
+[Rider User Secrets guide](https://www.jetbrains.com/help/rider/Manage_NET_user_secrets.html) and
+[.NET Secret Manager guide](https://learn.microsoft.com/aspnet/core/security/app-secrets?view=aspnetcore-10.0)
+for more background.
 
 ## The developer CLI
 
-`macrodeck-plugin` validates, inspects, packs, runs and conformance-tests a plugin without Macro Deck
-installed.
+`macrodeck-plugin` validates, inspects, packs and conformance-tests a plugin. Interactive starts use the
+launch profile above.
 
 ```bash
 dotnet tool install --global MacroDeck.Plugin.Cli --prerelease
@@ -283,7 +276,6 @@ real Kestrel server.
 | `validate` | Checks a manifest, version directory or artifact against the real manifest reader, the JSON Schema, the permission vocabulary and declared file digests. |
 | `inspect` | Reports what installing an artifact would find - entrypoints, permissions, dependencies, conflicts, compatibility, signature shape, size. |
 | `pack` | Builds a `.macroDeckPlugin` artifact, validating the manifest first and recomputing `files[]` digests. |
-| `run` | Launches the plugin the way the supervisor does, against a stub host or a real one. |
 | `test` | Runs the conformance suite and writes a text, JSON or Markdown report. |
 
 ### Packing a release
