@@ -1,4 +1,3 @@
-using MacroDeck.Plugin.Hosting;
 using MacroDeck.Plugin.Testing;
 using NUnit.Framework;
 
