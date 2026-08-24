@@ -1,8 +1,8 @@
 # Macro Deck plugin template
 
-A starting point for an out-of-process Macro Deck 3 plugin: one integration that starts, registers with
-a host and does nothing else. No sample capabilities to delete, no example code to read around - add
-what your plugin actually needs.
+A starting point for an out-of-process Macro Deck 3 plugin: one integration with a single localized
+example action, and the developer tooling wired up. The action exists to show the shape - the manifest,
+the resource file, the executor contract - and is meant to be replaced rather than grown.
 
 Looking for worked examples of each capability instead? The
 [sample plugins repository](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins) has one
@@ -22,7 +22,9 @@ template is in preview: `dotnet new install` picks stable versions by default, a
 release yet.
 
 ```bash
-dotnet new macrodeck-plugin -n Acme.LightControl --pluginId com.acme.light-control --pluginName "Acme Light Control"
+dotnet new macrodeck-plugin -n Acme.LightControl --pluginId com.acme.light-control --pluginName "Acme Light Control" \
+  --publisher "Acme Inc" --repository https://github.com/acme/light-control \
+  --platforms win-x64 --platforms osx-arm64 --platforms linux-x64
 ```
 
 | Parameter | Default | What it sets |
@@ -30,6 +32,18 @@ dotnet new macrodeck-plugin -n Acme.LightControl --pluginId com.acme.light-contr
 | `-n`, `--name` | `MacroDeckPlugin` | The project, namespace, solution and the executable names in `manifest.json` |
 | `--pluginId` | `com.example.my-plugin` | The manifest `id`: reverse-domain, lowercase, at least two dot-joined kebab segments |
 | `--pluginName` | `My Plugin` | The display name Macro Deck shows |
+| `--publisher` | `Example Publisher` | `publisher.name` |
+| `--description` | `A minimal Macro Deck 3 plugin.` | `description` |
+| `--license` | `MIT` | `license`, as an SPDX identifier |
+| `--repository` | *(omitted)* | `repository`. Left out of the manifest entirely when not supplied |
+| `--homepage` | *(omitted)* | `homepage`. Left out of the manifest entirely when not supplied |
+| `--platforms` | `win-x64`, `osx-arm64`, `linux-x64` | Which runtime identifiers land in `entrypoints` and `macrodeck-build.json`. Repeat the option per platform; `win-arm64`, `osx-x64` and `linux-arm64` are also available |
+
+`--repository` and `--homepage` are omitted rather than written empty on purpose: the manifest schema
+requires an absolute `http`/`https` URL, so `""` would fail validation.
+
+The `macrodeck-plugin new` wizard collects the same values and passes them straight through, so
+`dotnet new` and the CLI produce the same project.
 
 Or clone this repository and rename by hand - the two are the same content. If you clone, change the
 `id`, `name`, `version` and `description` in `src/MacroDeck.PluginTemplate/manifest.json`, then rename
@@ -84,13 +98,16 @@ name of a published one.
 
 ```
 src/MacroDeck.PluginTemplate/
-  Program.cs             the host builder - three lines and a RunAsync
+  Program.cs             the host builder - a few lines and a RunAsync
   manifest.json          identity, icon and per-platform entrypoints
+  macrodeck-build.json   how `macrodeck-plugin build` publishes each platform
   PluginIntegration.cs   the integration: lifecycle and capability opt-ins
+  LogMessageAction.cs    the example action, localized end to end
+  Localization/Strings.resx   the default-culture strings, one file per language
   Assets/icon.svg        the icon the manifest declares
   Properties/launchSettings.json   the shared real-host debug profile
 tests/MacroDeck.PluginTemplate.Tests/
-  PluginIntegrationTests.cs   the plugin builds and initializes
+  PluginIntegrationTests.cs   the plugin builds, the action runs, the catalog is wired
 ```
 
 ### The entry point
@@ -102,6 +119,7 @@ services, dependency injection:
 ```csharp
 var plugin = MacroDeckPlugin.CreatePlugin(args)
     .UseMacroDeckLogging()
+    .UseLocalization(Strings.LocalizationCatalog)
     .RegisterIntegration<PluginIntegration>()
     .Build();
 
@@ -129,20 +147,58 @@ and fails fast on an invalid id, a missing name or version, or an unreadable ico
   "description": "A minimal Macro Deck 3 plugin.",
   "icon": "Assets/icon.svg",
   "entrypoints": {
-    "win-x64": { "executable": "MacroDeck.PluginTemplate.exe" },
-    "osx-arm64": { "executable": "MacroDeck.PluginTemplate" },
-    "osx-x64": { "executable": "MacroDeck.PluginTemplate" },
-    "linux-x64": { "executable": "MacroDeck.PluginTemplate" }
+    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.exe" },
+    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate" },
+    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate" }
+  },
+  "publisher": { "name": "Example Publisher" },
+  "license": "MIT",
+  "compatibility": { "macroDeck": ">=3.0.0" }
+}
+```
+
+Only `manifestVersion`, `id`, `name`, `version` and `entrypoints` are required; `description`, `icon`,
+`license`, `publisher.name` and `compatibility` are what publishing to the store additionally needs. A
+manifest may also declare `permissions`, `dependencies`, `conflicts`, `iconPacks`, `languages` and
+`files[]` - `macrodeck-plugin inspect` reports all of them, and `pack` recomputes `files[]` and
+`languages` for you. Never hand-maintain those two.
+
+Each entrypoint lives under `runtimes/<rid>/` so a multi-platform artifact cannot collide with itself,
+and it carries no `runtime` block, which makes it self-contained - hence the `--self-contained true` in
+`macrodeck-build.json`. A framework-dependent plugin is the other pairing: a `.dll` executable plus
+`"runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" }`. Mixing them fails validation.
+
+`win-arm64` falls back to `win-x64` and `osx-arm64` falls back to `osx-x64`; there is no `"any"` key,
+and `linux-musl-*` resolves no fallback at all.
+
+### The build configuration
+
+`macrodeck-build.json` sits beside the manifest and tells `macrodeck-plugin build` how to produce each
+runtime identifier the manifest declares:
+
+```json
+{
+  "version": 1,
+  "targets": {
+    "win-x64": {
+      "executable": "dotnet",
+      "arguments": [
+        "publish", "MacroDeck.PluginTemplate.csproj",
+        "-c", "Release",
+        "-r", "win-x64",
+        "--self-contained", "true",
+        "-o", "bin/publish/win-x64"
+      ],
+      "output": "bin/publish/win-x64"
+    }
   }
 }
 ```
 
-Only `manifestVersion`, `id`, `name`, `version` and `entrypoints` are required. A manifest may also
-declare `permissions`, `dependencies`, `conflicts`, `iconPacks`, `compatibility` and `files[]` -
-`macrodeck-plugin inspect` reports all of them, and `pack` recomputes `files[]` for you.
-
-`win-arm64` falls back to `win-x64` and `osx-arm64` falls back to `osx-x64`; there is no `"any"` key,
-and `linux-musl-*` resolves no fallback at all.
+`executable` plus `arguments` rather than a shell string, and one `output` directory per target. The
+shape carries no .NET assumptions - the values do - so a plugin built with another toolchain replaces
+the values and keeps the keys. A target is required for every runtime identifier the manifest
+declares; adding a platform means adding it in both files.
 
 ### Capabilities
 
@@ -170,6 +226,109 @@ ids and never the qualified form.
 
 The [sample plugins](https://github.com/Macro-Deck-App/Macro-Deck-Sample-Plugins) are the worked
 examples for each of these.
+
+## Localization
+
+Every string a user reads comes from `Localization/Strings.resx`, not from a literal. The
+`MacroDeck.Plugin.Analyzers` source generator turns that folder into a typed `Strings` class whose
+members return a `LocalizedString` - a *reference*, not text - and
+`UseLocalization(Strings.LocalizationCatalog)` in `Program.cs` hands the catalog to the host. The host
+resolves each reference for whoever is reading it, so a language change takes effect without the plugin
+rebuilding anything.
+
+```csharp
+public LocalizedText Name => Strings.Actions.LogMessage.Name();
+
+public IReadOnlyList<ActionParameter> Parameters { get; } =
+[
+    ActionParameter.Text(
+        "message",
+        label: Strings.Actions.LogMessage.Message.Label(),
+        description: Strings.Actions.LogMessage.Message.Description(),
+        placeholder: Strings.Actions.LogMessage.Message.Placeholder(),
+        required: true),
+];
+```
+
+A dotted key becomes a nested class, so `Actions.LogMessage.Name` in the resource file is
+`Strings.Actions.LogMessage.Name()` in code. Name keys after where they are used, so a translator can
+place a string without reading the source.
+
+Anywhere the SDK takes a `LocalizedText` takes one of these: action names and descriptions, parameter
+labels, descriptions and placeholders, `ActionStateDefinition` labels, config flow step titles and field
+labels, event and variable metadata, issue text, and the message on `ActionResult.Failed`. A plain
+`string` also converts, and stays untranslated - which is what makes a missed one easy to spot once a
+second language exists.
+
+One field is deliberately *not* localized: `ConfigFlowResult.Complete(title, …)` takes a plain `string`,
+because the host stores that title as the configured entry's name and the user can rename it.
+
+### Reuse Macro Deck's own strings
+
+`MacroDeckStrings` is the catalog Macro Deck already ships translated - `Common.*`, `Validation.*`,
+`Connection.*`, `Settings.*`. Use it instead of declaring your own copy of a generic string; the example
+action composes one with a key of its own:
+
+```csharp
+ActionResult.Failed(
+    ActionErrorCodes.InvalidParameter,
+    MacroDeckStrings.Validation.Required(Strings.Actions.LogMessage.Message.Label()));
+```
+
+### Adding a key
+
+1. Add a `<data name="..."><value>...</value></data>` entry to `Localization/Strings.resx`.
+2. Build. The generator adds the matching `Strings.*` member.
+3. Use it wherever the SDK asks for a `LocalizedText`.
+
+Placeholders are named and substituted by name, not by argument order:
+
+```xml
+<data name="Actions.Ping.Result" xml:space="preserve">
+  <value>Reached {host} in {milliseconds} ms.</value>
+  <comment>[milliseconds:int] Round-trip time.</comment>
+</data>
+```
+
+The generator turns each into a method parameter, so forgetting one is a compile error. A placeholder is
+a `string` unless a bracketed prefix on the `<comment>` narrows it to `int`, `long`, `double` or `bool`;
+the rest of the comment stays the note a translator reads.
+
+A count-dependent sentence is one key with `[plural]` on every form and keys suffixed `.One` and
+`.Other` (`Other` is required). The two entries generate a single member taking the count first. The rule
+is `count == 1` for every language - deliberately not CLDR - so phrase `Other` to stay grammatical for
+languages that need forms this model has no room for.
+
+### Adding a language
+
+Add `Localization/Strings.<culture>.resx` beside the default file, using a well-formed BCP-47 name:
+`Strings.de.resx`, `Strings.pt-BR.resx`, `Strings.zh-Hant-TW.resx`. Full tags only - `zh-Hans` and
+`zh-Hant` are different languages and both would collapse onto `zh`. An underscore (`Strings.de_DE.resx`)
+is a build error rather than a culture nobody ever reaches.
+
+A translation needs only the keys it actually translates. Resolution tries the requested culture, its
+neutral culture, the catalog's default language, then `en`, so a half-finished translation degrades to
+English. A key no culture carries renders as a conspicuous `[[plugin:<id>:Key]]` rather than blank.
+There is nothing to register per language - `Strings.LocalizationCatalog` already carries every culture
+in the folder.
+
+`macrodeck-plugin build` and `pack` derive the manifest's `languages` array from this folder. Do not
+maintain it by hand.
+
+The generator reports its own diagnostics while you type - a key only a translation has, a placeholder
+set that disagrees with the default language, a malformed culture suffix, a broken plural family
+(`MDLOC001`-`MDLOC008`).
+
+### Editing translations
+
+`.resx` is the canonical format because [JetBrains Rider's Localization
+Manager](https://www.jetbrains.com/help/rider/Localizing_Applications.html) reads it: every key as a
+row, every culture as a column, missing translations highlighted, CSV export for handing a translator a
+spreadsheet, and renames applied across every culture at once. Nothing requires Rider - these are plain
+`.resx` files - but that is the workflow the format was chosen to unlock.
+
+The full reference, including every diagnostic, is the
+[localization guide](https://docs.macro-deck.app/sdk/localization/).
 
 ## Run and debug against Macro Deck
 
@@ -273,34 +432,54 @@ real Kestrel server.
 
 | Command | What it does |
 | --- | --- |
+| `new` | Scaffolds a project from this template, prompting for the values `dotnet new` takes as parameters. |
+| `build` | Publishes every runtime identifier the manifest declares using `macrodeck-build.json`, then packs the result. |
 | `validate` | Checks a manifest, version directory or artifact against the real manifest reader, the JSON Schema, the permission vocabulary and declared file digests. |
 | `inspect` | Reports what installing an artifact would find - entrypoints, permissions, dependencies, conflicts, compatibility, signature shape, size. |
 | `pack` | Builds a `.macroDeckPlugin` artifact, validating the manifest first and recomputing `files[]` digests. |
+| `run` | Launches the plugin against a real host or a disposable stub one, streaming its output. |
 | `test` | Runs the conformance suite and writes a text, JSON or Markdown report. |
+| `sign`, `verify`, `keygen` | Creator signing for a packed artifact. |
+
+### Running without a host
+
+```bash
+macrodeck-plugin run --project src/MacroDeck.PluginTemplate --stub-host
+```
+
+`--stub-host` starts a disposable in-process host, so this needs no Macro Deck installation: the plugin
+registers, negotiates the protocol and initializes, and its log output is streamed until you interrupt
+it. `--artifact <file>` does the same for a packed artifact, which is what proves an entrypoint path in
+the manifest matches what `build` actually wrote. Drop `--stub-host` to attach to the running desktop
+app instead; for debugging with breakpoints, use the launch profile above rather than this.
 
 ### Packing a release
 
+`build` is the whole path: it reads `macrodeck-build.json`, publishes each declared platform into its
+`runtimes/<rid>/` slot and packs the artifact.
+
 ```bash
-dotnet build -c Release
+macrodeck-plugin build --source src/MacroDeck.PluginTemplate --output ./artifacts
 ```
 
 ```bash
-macrodeck-plugin validate --manifest src/MacroDeck.PluginTemplate/bin/Release/net10.0/manifest.json
+macrodeck-plugin build --source src/MacroDeck.PluginTemplate --rid win-x64 --output ./artifacts
 ```
+
+The second form builds one platform, which is what a CI matrix job wants.
 
 ```bash
-macrodeck-plugin pack --source src/MacroDeck.PluginTemplate/bin/Release/net10.0
+macrodeck-plugin inspect --artifact ./artifacts/<id>-<version>.macroDeckPlugin
 ```
 
-```bash
-macrodeck-plugin inspect --artifact <id>-<version>.macroDeckPlugin
-```
+Packing validates before it writes, so a bad manifest never becomes an artifact. It discards whatever
+`files[]` the source manifest declared and recomputes every digest from disk, and fills in `languages`
+from `Localization/`. It cannot sign anything: sign *after* packing, against the packed manifest, or the
+digest will not match.
 
-`pack` validates before it writes, so a bad manifest never becomes an artifact. It discards whatever
-`files[]` the source manifest declared and recomputes every digest from disk. It cannot sign anything:
-sign *after* packing, against the packed manifest, or the digest will not match.
-
-`--output` defaults to `<id>-<version>.macroDeckPlugin`; `--force` overwrites an existing file.
+A plain `dotnet build -c Release` does not produce a packable layout - the manifest points at
+`runtimes/<rid>/`, which only `build` assembles. Use `validate` against a built artifact or a version
+directory rather than against `bin/Release/net10.0`.
 
 ### Conformance
 
@@ -351,6 +530,9 @@ change to the plugin in `src/`. How the package is built and released is documen
 ## License
 
 MIT - see [LICENSE](LICENSE). Macro Deck itself is licensed under Apache 2.0.
+
+A generated project carries this MIT `LICENSE` file whatever `--license` you passed: the parameter sets
+the manifest's `license` field only. If you chose something else, replace `LICENSE` to match.
 
 ## Further reading
 
