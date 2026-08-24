@@ -14,9 +14,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Build-time only: compile-time diagnostics for plugin authors, and the [MacroDeckSdkUsage]
-             attribute the host reads to report real deprecation usage. Never shipped in the output. -->
+        <!-- Build-time only: compile-time diagnostics for plugin authors, the [MacroDeckSdkUsage]
+             attribute the host reads to report real deprecation usage, and the source generator that
+             turns Localization/*.resx into the typed Strings class. Never shipped in the output. -->
         <PackageReference Include="MacroDeck.Plugin.Analyzers" PrivateAssets="all" />
+        <!-- Referenced directly rather than relied on transitively through the SDK: LocalizedText and
+             the generated Strings class are part of this project's own source. -->
+        <PackageReference Include="MacroDeck.Localization" />
         <PackageReference Include="MacroDeck.Plugin.Hosting" />
         <PackageReference Include="MacroDeck.Plugin.Serilog" />
         <PackageReference Include="MacroDeck.Sdk" />

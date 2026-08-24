@@ -7,9 +7,15 @@
   "description": "A minimal Macro Deck 3 plugin.",
   "icon": "Assets/icon.svg",
   "entrypoints": {
-    "win-x64": { "executable": "MacroDeck.PluginTemplate.exe" },
-    "osx-arm64": { "executable": "MacroDeck.PluginTemplate" },
-    "osx-x64": { "executable": "MacroDeck.PluginTemplate" },
-    "linux-x64": { "executable": "MacroDeck.PluginTemplate" }
+    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.exe" },
+    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate" },
+    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate" }
+  },
+  "publisher": {
+    "name": "Example Publisher"
+  },
+  "license": "MIT",
+  "compatibility": {
+    "macroDeck": ">=3.0.0"
   }
 }
