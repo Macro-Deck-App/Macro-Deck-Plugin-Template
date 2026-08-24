@@ -61,6 +61,35 @@ jobs:
           fi
           dotnet pack packaging/MacroDeck.Plugin.Templates.csproj -c Release -o "${{ runner.temp }}/packages" "${pack_args[@]}"
 
+      # The template ships conditional copies of manifest.json and macrodeck-build.json under
+      # .template.config/content/, because a file carrying //#if markers is not valid JSON and the
+      # copies under src/ have to stay readable by the manifest reader and the CLI. Rendering the
+      # template with default parameters must therefore reproduce those two files exactly; anything
+      # else means the two copies have drifted.
+      - name: Check the generated project matches the template content
+        run: |
+          set -euo pipefail
+          dotnet new install "${{ runner.temp }}"/packages/MacroDeck.Plugin.Templates.*.nupkg
+          generated="${{ runner.temp }}/generated"
+          mkdir -p "$generated"
+          dotnet new macrodeck-plugin \
+            --output "$generated/MacroDeck.PluginTemplate" \
+            -n MacroDeck.PluginTemplate \
+            --pluginId app.macro-deck.template \
+            --pluginName "Macro Deck Plugin Template" \
+            --skipRestore
+          for file in manifest.json macrodeck-build.json; do
+            diff --unified \
+              "src/MacroDeck.PluginTemplate/$file" \
+              "$generated/MacroDeck.PluginTemplate/src/MacroDeck.PluginTemplate/$file" \
+              || {
+                echo "::error file=.template.config/content/$file::Rendering the template with default parameters no longer reproduces src/MacroDeck.PluginTemplate/$file. Update both copies."
+                exit 1
+              }
+          done
+          dotnet build "$generated/MacroDeck.PluginTemplate" -c Release -warnaserror
+          dotnet test "$generated/MacroDeck.PluginTemplate" -c Release --no-build
+
       # Uploaded even for a run that will not publish, so the exact artifact a commit produced can be
       # downloaded and inspected from the run.
       - name: Upload package

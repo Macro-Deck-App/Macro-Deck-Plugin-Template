@@ -7,7 +7,17 @@ the package that ships it.
 The repository root *is* the template content. What `dotnet new macrodeck-plugin` writes out is exactly
 what a clone of this repository contains, minus what `.template.config/template.json` excludes
 (`packaging/`, `.github/`, `local-feed/*.nupkg`, build output). So a change to the template is an
-ordinary change to the plugin in `src/` - there is no second copy to keep in sync.
+ordinary change to the plugin in `src/`.
+
+The one exception is `.template.config/content/`, which holds conditional variants of `manifest.json`
+and `macrodeck-build.json`. Platform selection and the omission of an unsupplied `repository` or
+`homepage` need `//#if` markers, and a file carrying those is not valid JSON - which would break
+`macrodeck-plugin validate` and `build` and the manifest reader for anyone who *clones* the repository
+instead of generating from it. So the files under `src/` stay valid JSON, `template.json` excludes them
+from the first source and maps the variants over them from a second one.
+
+That is a real second copy. Change one and you must change the other: rendering the template with
+default parameters has to reproduce the `src/` files byte for byte, which the CI job below checks.
 
 ## Releasing
 
@@ -59,7 +69,16 @@ Anything added to the repository root ships to everyone who runs `dotnet new mac
   alone does not stop an untracked credential from entering the `.nupkg`.
 - **Keep renaming working.** `sourceName` is `MacroDeck.PluginTemplate`, `pluginId` replaces
   `app.macro-deck.template` and `pluginName` replaces `Macro Deck Plugin Template`. Anything that
-  hardcodes one of those strings has to keep matching.
+  hardcodes one of those strings has to keep matching. The same goes for the metadata symbols:
+  `publisher` replaces `Example Publisher`, `description` replaces `A minimal Macro Deck 3 plugin.`,
+  `license` replaces `MIT`, `repository` replaces `https://github.com/example/my-plugin` and `homepage`
+  replaces `https://example.com/my-plugin`.
+- **Watch what `replaces` sweeps up.** A `replaces` value is plain text matched across every processed
+  file, not a JSON path. `MIT` is why `LICENSE` is `copyOnly` - otherwise `--license Apache-2.0` would
+  rewrite the licence text itself. Before adding a symbol, grep the repository for its placeholder and
+  confirm every hit should change.
+- **Keep the resx `copyOnly`.** `Localization/*.resx` carries no placeholder and must not be run through
+  conditional processing.
 - **Do not link to repository-only files by relative path** from `README.md` or `AGENTS.md`: both ship
   into generated projects, where such a link is dead. Link to the file on GitHub instead.
 
@@ -70,7 +89,12 @@ Anything added to the repository root ships to everyone who runs `dotnet new mac
 generate a project and confirm:
 
 - the project, test project, solution file and namespaces all carry the new name,
-- `manifest.json` carries the new `id`, `name` and per-platform `executable` values,
+- `manifest.json` carries the new `id`, `name`, `publisher.name`, `license` and per-platform
+  `executable` values, and omits `repository`/`homepage` when they were not supplied,
+- `macrodeck-build.json` has a target for exactly the platforms `--platforms` selected, matching
+  `entrypoints`,
+- generating with default parameters reproduces `src/MacroDeck.PluginTemplate/manifest.json` and
+  `macrodeck-build.json` byte for byte,
 - `Properties/launchSettings.json` exists with only the secret-free **Macro Deck - Real Host** profile,
 - no `.run/` directory or `.macrodeck-dev-state/` content was emitted,
 - `dotnet build` and `dotnet test` pass in the generated project,
