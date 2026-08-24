@@ -98,4 +98,12 @@ generate a project and confirm:
 - `Properties/launchSettings.json` exists with only the secret-free **Macro Deck - Real Host** profile,
 - no `.run/` directory or `.macrodeck-dev-state/` content was emitted,
 - `dotnet build` and `dotnet test` pass in the generated project,
+- `macrodeck-plugin build` publishes every declared runtime identifier and packs an artifact that
+  `validate` accepts and `run --stub-host` can start,
 - no repository-only file (`packaging/`, `.github/`, packed SDK packages) leaked into the output.
+
+CI does all of this on every pull request, so the list is a description of the gate rather than a manual
+checklist. The last item is the one worth understanding: `entrypoints` and `macrodeck-build.json` are
+two files that have to agree, and nothing but an actual `build` proves they do. A template that emits a
+target for a platform the manifest does not declare - or an entrypoint path that does not match what the
+publish step writes - fails there and nowhere earlier.

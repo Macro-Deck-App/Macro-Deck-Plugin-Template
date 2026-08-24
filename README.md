@@ -437,7 +437,21 @@ real Kestrel server.
 | `validate` | Checks a manifest, version directory or artifact against the real manifest reader, the JSON Schema, the permission vocabulary and declared file digests. |
 | `inspect` | Reports what installing an artifact would find - entrypoints, permissions, dependencies, conflicts, compatibility, signature shape, size. |
 | `pack` | Builds a `.macroDeckPlugin` artifact, validating the manifest first and recomputing `files[]` digests. |
+| `run` | Launches the plugin against a real host or a disposable stub one, streaming its output. |
 | `test` | Runs the conformance suite and writes a text, JSON or Markdown report. |
+| `sign`, `verify`, `keygen` | Creator signing for a packed artifact. |
+
+### Running without a host
+
+```bash
+macrodeck-plugin run --project src/MacroDeck.PluginTemplate --stub-host
+```
+
+`--stub-host` starts a disposable in-process host, so this needs no Macro Deck installation: the plugin
+registers, negotiates the protocol and initializes, and its log output is streamed until you interrupt
+it. `--artifact <file>` does the same for a packed artifact, which is what proves an entrypoint path in
+the manifest matches what `build` actually wrote. Drop `--stub-host` to attach to the running desktop
+app instead; for debugging with breakpoints, use the launch profile above rather than this.
 
 ### Packing a release
 

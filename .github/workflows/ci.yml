@@ -66,14 +66,13 @@ jobs:
       # copies under src/ have to stay readable by the manifest reader and the CLI. Rendering the
       # template with default parameters must therefore reproduce those two files exactly; anything
       # else means the two copies have drifted.
-      - name: Check the generated project matches the template content
+      - name: Generate a project and check it matches the template content
         run: |
           set -euo pipefail
           dotnet new install "${{ runner.temp }}"/packages/MacroDeck.Plugin.Templates.*.nupkg
-          generated="${{ runner.temp }}/generated"
-          mkdir -p "$generated"
+          generated="${{ runner.temp }}/generated/MacroDeck.PluginTemplate"
           dotnet new macrodeck-plugin \
-            --output "$generated/MacroDeck.PluginTemplate" \
+            --output "$generated" \
             -n MacroDeck.PluginTemplate \
             --pluginId app.macro-deck.template \
             --pluginName "Macro Deck Plugin Template" \
@@ -81,14 +80,75 @@ jobs:
           for file in manifest.json macrodeck-build.json; do
             diff --unified \
               "src/MacroDeck.PluginTemplate/$file" \
-              "$generated/MacroDeck.PluginTemplate/src/MacroDeck.PluginTemplate/$file" \
+              "$generated/src/MacroDeck.PluginTemplate/$file" \
               || {
                 echo "::error file=.template.config/content/$file::Rendering the template with default parameters no longer reproduces src/MacroDeck.PluginTemplate/$file. Update both copies."
                 exit 1
               }
           done
-          dotnet build "$generated/MacroDeck.PluginTemplate" -c Release -warnaserror
-          dotnet test "$generated/MacroDeck.PluginTemplate" -c Release --no-build
+          echo "GENERATED_PROJECT=$generated" >> "$GITHUB_ENV"
+
+      - name: Build and test the generated project
+        run: |
+          set -euo pipefail
+          dotnet build "$GENERATED_PROJECT" -c Release -warnaserror
+          dotnet test "$GENERATED_PROJECT" -c Release --no-build
+
+      - name: Install the plugin CLI
+        run: |
+          set -euo pipefail
+          dotnet tool install --global MacroDeck.Plugin.Cli --prerelease
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # `build` is the packing path a generated plugin actually ships through, and the only thing that
+      # proves macrodeck-build.json has a working target for every runtime identifier the manifest
+      # declares. It publishes each one into its runtimes/<rid>/ slot and packs the artifact, so a
+      # template that emits the two files inconsistently fails here rather than in someone's release.
+      - name: Build and pack the generated plugin with the CLI
+        run: |
+          set -euo pipefail
+          macrodeck-plugin build \
+            --source "$GENERATED_PROJECT/src/MacroDeck.PluginTemplate" \
+            --output "${{ runner.temp }}/plugin-artifacts" \
+            --force
+          artifact=$(find "${{ runner.temp }}/plugin-artifacts" -name '*.macroDeckPlugin' -print -quit)
+          if [ -z "$artifact" ]; then
+            echo "::error::macrodeck-plugin build produced no artifact."
+            exit 1
+          fi
+          macrodeck-plugin validate --artifact "$artifact"
+          macrodeck-plugin inspect --artifact "$artifact"
+          echo "PLUGIN_ARTIFACT=$artifact" >> "$GITHUB_ENV"
+
+      # The artifact is only proven when it actually starts: `run --stub-host` launches it against a
+      # disposable in-process host, so a manifest whose entrypoint path does not match what the build
+      # produced fails here instead of on a user's machine. The session banner is the success signal;
+      # `run` streams until interrupted, so it is stopped as soon as that appears and its cancelled
+      # exit code is expected rather than checked.
+      - name: Run the packed plugin against a stub host
+        run: |
+          set -uo pipefail
+          log="${{ runner.temp }}/plugin-run.log"
+          macrodeck-plugin run --artifact "$PLUGIN_ARTIFACT" --stub-host --no-color > "$log" 2>&1 &
+          run_pid=$!
+          established=0
+          for _ in $(seq 1 180); do
+            if grep -q "Session established" "$log"; then
+              established=1
+              break
+            fi
+            if ! kill -0 "$run_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          kill "$run_pid" 2>/dev/null || true
+          wait "$run_pid" 2>/dev/null || true
+          cat "$log"
+          if [ "$established" -ne 1 ]; then
+            echo "::error::The packed plugin never established a session against the stub host."
+            exit 1
+          fi
 
       # Uploaded even for a run that will not publish, so the exact artifact a commit produced can be
       # downloaded and inspected from the run.
