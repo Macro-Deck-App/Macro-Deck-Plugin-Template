@@ -9,41 +9,41 @@
   "entrypoints": {
 //#if (winX64)
 //#if (commaAfterWinX64)
-    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.exe" },
+    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
 //#else
-    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.exe" }
+    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
 //#endif
 //#endif
 //#if (winArm64)
 //#if (commaAfterWinArm64)
-    "win-arm64": { "executable": "runtimes/win-arm64/MacroDeck.PluginTemplate.exe" },
+    "win-arm64": { "executable": "runtimes/win-arm64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
 //#else
-    "win-arm64": { "executable": "runtimes/win-arm64/MacroDeck.PluginTemplate.exe" }
+    "win-arm64": { "executable": "runtimes/win-arm64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
 //#endif
 //#endif
 //#if (osxArm64)
 //#if (commaAfterOsxArm64)
-    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate" },
+    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
 //#else
-    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate" }
+    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
 //#endif
 //#endif
 //#if (osxX64)
 //#if (commaAfterOsxX64)
-    "osx-x64": { "executable": "runtimes/osx-x64/MacroDeck.PluginTemplate" },
+    "osx-x64": { "executable": "runtimes/osx-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
 //#else
-    "osx-x64": { "executable": "runtimes/osx-x64/MacroDeck.PluginTemplate" }
+    "osx-x64": { "executable": "runtimes/osx-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
 //#endif
 //#endif
 //#if (linuxX64)
 //#if (commaAfterLinuxX64)
-    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate" },
+    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
 //#else
-    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate" }
+    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
 //#endif
 //#endif
 //#if (linuxArm64)
-    "linux-arm64": { "executable": "runtimes/linux-arm64/MacroDeck.PluginTemplate" }
+    "linux-arm64": { "executable": "runtimes/linux-arm64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
 //#endif
   },
   "publisher": {

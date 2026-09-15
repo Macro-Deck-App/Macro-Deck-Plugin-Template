@@ -149,9 +149,18 @@ and fails fast on an invalid id, a missing name or version, or an unreadable ico
   "description": "A minimal Macro Deck 3 plugin.",
   "icon": "Assets/icon.svg",
   "entrypoints": {
-    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.exe" },
-    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate" },
-    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate" }
+    "win-x64": {
+      "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.dll",
+      "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" }
+    },
+    "osx-arm64": {
+      "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate.dll",
+      "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" }
+    },
+    "linux-x64": {
+      "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate.dll",
+      "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" }
+    }
   },
   "publisher": { "name": "Example Publisher" },
   "license": "MIT",
@@ -165,10 +174,21 @@ manifest may also declare `permissions`, `dependencies`, `conflicts`, `iconPacks
 `files[]` - `macrodeck-plugin inspect` reports all of them, and `pack` recomputes `files[]` and
 `languages` for you. Never hand-maintain those two.
 
-Each entrypoint lives under `runtimes/<rid>/` so a multi-platform artifact cannot collide with itself,
-and it carries no `runtime` block, which makes it self-contained - hence the `--self-contained true` in
-`macrodeck-build.json`. A framework-dependent plugin is the other pairing: a `.dll` executable plus
-`"runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" }`. Mixing them fails validation.
+Each entrypoint lives under `runtimes/<rid>/` so a multi-platform artifact cannot collide with itself.
+
+The template is **framework-dependent**: each entrypoint names the `.dll` and carries a `runtime`
+block, and `macrodeck-build.json` publishes with `--self-contained false` and `-p:UseAppHost=false`.
+Macro Deck ships a .NET 10 runtime, including ASP.NET Core, with the host (from 3.0.0) and starts a
+framework-dependent plugin on it, so the artifact carries only your own assemblies - about 0.7 MB per
+platform for this template instead of about 43 MB self-contained. Because the process is the shared
+`dotnet` executable running your `.dll`, the plugin shows up as `dotnet` in Task Manager, Activity
+Monitor or `ps`, not under its own name.
+
+**Self-contained** is still supported, and is what an entrypoint without a `runtime` block means. Choose
+it when the plugin needs a runtime Macro Deck does not ship, such as another .NET major version. Switch
+all three places together, per platform: drop the `runtime` block, point `executable` at the apphost
+(`MacroDeck.PluginTemplate.exe` on Windows, `MacroDeck.PluginTemplate` elsewhere), and publish with
+`--self-contained true` without `-p:UseAppHost=false`. Mixing the two pairings fails validation.
 
 `win-arm64` falls back to `win-x64` and `osx-arm64` falls back to `osx-x64`; there is no `"any"` key,
 and `linux-musl-*` resolves no fallback at all.
@@ -188,7 +208,8 @@ runtime identifier the manifest declares:
         "publish", "MacroDeck.PluginTemplate.csproj",
         "-c", "Release",
         "-r", "win-x64",
-        "--self-contained", "true",
+        "--self-contained", "false",
+        "-p:UseAppHost=false",
         "-o", "bin/publish/win-x64"
       ],
       "output": "bin/publish/win-x64"
