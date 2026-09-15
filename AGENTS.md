@@ -337,6 +337,14 @@ A `dotnet build -c Release` output is *not* packable: the manifest points at `ru
 only `build` assembles, so `validate`/`pack` against `bin/Release/net10.0` fails on a missing entrypoint.
 Adding a platform means adding it to `entrypoints` **and** `macrodeck-build.json`.
 
+Plugins are **framework-dependent** by default: each entrypoint names `runtimes/<rid>/<Name>.dll` with
+`"runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" }`, and each target publishes with
+`--self-contained false -p:UseAppHost=false`. Macro Deck ships a .NET 10 runtime (ASP.NET Core
+included) with the host and runs the plugin on it, which is also why it appears as `dotnet` in process
+lists. Go self-contained only for a runtime Macro Deck does not ship: remove the `runtime` block, point
+`executable` at the apphost (no `.dll`; `.exe` on Windows) and publish with `--self-contained true`.
+Keep the manifest and `macrodeck-build.json` on the same pairing; mixing them fails validation.
+
 Packing validates first, recomputes every `files[]` digest from disk and fills in `languages` from
 `Localization/`, discarding whatever the source manifest declared - so never hand-maintain either.
 Signing happens *after* packing, against the packed manifest; sign earlier and the digest will not

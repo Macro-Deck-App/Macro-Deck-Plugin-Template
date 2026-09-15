@@ -7,9 +7,9 @@
   "description": "A minimal Macro Deck 3 plugin.",
   "icon": "Assets/icon.svg",
   "entrypoints": {
-    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.exe" },
-    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate" },
-    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate" }
+    "win-x64": { "executable": "runtimes/win-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
+    "osx-arm64": { "executable": "runtimes/osx-arm64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } },
+    "linux-x64": { "executable": "runtimes/linux-x64/MacroDeck.PluginTemplate.dll", "runtime": { "kind": "FrameworkDependent", "dotnetVersion": "10.0" } }
   },
   "publisher": {
     "name": "Example Publisher"
