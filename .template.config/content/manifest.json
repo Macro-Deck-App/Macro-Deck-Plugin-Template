@@ -57,6 +57,6 @@
   "homepage": "https://example.com/my-plugin",
 //#endif
   "compatibility": {
-    "macroDeck": ">=3.0.0"
+    "macroDeck": ">=3.0.0-0"
   }
 }

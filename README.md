@@ -153,7 +153,7 @@ and fails fast on an invalid id, a missing name or version, or an unreadable ico
   },
   "publisher": { "name": "Example Publisher" },
   "license": "MIT",
-  "compatibility": { "macroDeck": ">=3.0.0" }
+  "compatibility": { "macroDeck": ">=3.0.0-0" }
 }
 ```
 
