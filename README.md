@@ -47,7 +47,9 @@ The `macrodeck-plugin new` wizard collects the same values and passes them strai
 
 Or clone this repository and rename by hand - the two are the same content. If you clone, change the
 `id`, `name`, `version` and `description` in `src/MacroDeck.PluginTemplate/manifest.json`, then rename
-the projects, the solution file and the namespace.
+the projects, the solution file and the namespace. The plugin project pins its `AssemblyName` and
+`RootNamespace`. The `AssemblyName` is the executable name the manifest's `entrypoints` declare: change
+both together, or they stop matching.
 
 Either way, replace `Assets/icon.svg`. It is your plugin's icon: the manifest's `icon` path is the
 single source of truth and the host reads that file directly, so there is no code to change.

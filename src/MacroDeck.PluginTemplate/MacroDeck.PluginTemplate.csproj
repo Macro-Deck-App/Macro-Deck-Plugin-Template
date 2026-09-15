@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
+        <!-- Pinned rather than taken from the project file name: manifest.json declares this executable
+             name, and the generated Strings class lives in this namespace, so renaming the .csproj later
+             must neither rename the built executable nor move Strings out from under the code. -->
+        <AssemblyName>MacroDeck.PluginTemplate</AssemblyName>
+        <RootNamespace>MacroDeck.PluginTemplate</RootNamespace>
         <IsPackable>false</IsPackable>
         <UserSecretsId>MacroDeck.PluginTemplate-PluginDevelopment</UserSecretsId>
     </PropertyGroup>

@@ -73,7 +73,10 @@ one change:
 1. `manifest.json` - `id` (reverse-domain, lowercase, at least two dot-joined kebab segments, e.g.
    `com.example.my-plugin`), `name`, `version`, `description`, `publisher.name`, and `entrypoints` plus
    the matching `macrodeck-build.json` targets for the platforms you actually ship.
-2. Rename the project, the test project, the solution file and the namespace.
+2. Rename the project, the test project, the solution file and the namespace. The project's
+   `AssemblyName` and `RootNamespace` are pinned: the first names the executable, so change it together
+   with the `entrypoints` paths - never one without the other, or `macrodeck-plugin build` fails with
+   `entrypoint-missing`; the second is where the generated `Strings` class lives.
 3. Replace `Assets/icon.svg`. The manifest's `icon` path is the single source of truth and the host
    reads that file directly - there is no icon code to change.
 4. Replace `LogMessageAction` with the plugin's real first action, and its keys in
