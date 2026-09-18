@@ -86,6 +86,49 @@ one change:
 diagnostics that catch most of the mistakes below while you type, plus the `[MacroDeckSdkUsage]`
 attribute the host reads to report real deprecation usage instead of inferring it. Keep it.
 
+## Store gate
+
+A plugin is published through the Macro Deck Store, and the Creator Portal refuses a build that breaks
+its policy. The policy changes over time, so never rely on a copy, on memory or on an earlier fetch in
+the same session. **Fetch every document below again before you start a change and again before you call
+it done.** If one cannot be fetched, say so and stop rather than assuming it still says what it said last
+time.
+
+| What | Where |
+| --- | --- |
+| Creator Guidelines (Markdown) | <https://api.macro-deck.app/api/v1/public/creator-guidelines> |
+| Blocked packages (JSON) | <https://api.macro-deck.app/api/v1/public/dependency-policy/blocked-packages> |
+| Minimum SDK version and allowed Macro Deck packages (JSON) | <https://api.macro-deck.app/api/v1/public/dependency-policy/sdk> |
+
+A change is not done until all five hold:
+
+1. **The plugin follows the Creator Guidelines.** Read the whole document, not just the part that seems
+   relevant, and check the change against every rule in it. Where a rule here and the guidelines
+   disagree, the guidelines win. Point out the conflict so this file can be corrected.
+2. **No blocked package is used.** Check every entry in `blockedPackages` against the full dependency
+   graph (`dotnet list package --include-transitive`), not only the packages referenced directly. An
+   entry matches by `packagePattern`. A `versionPattern` of `null` blocks every version. Otherwise only
+   the matching versions are blocked. `reason` says why. Replace the package or restructure the code
+   that needs it. Never work around a block by vendoring, renaming or loading the package some other
+   way.
+3. **The Macro Deck SDK is at least `minimumSdkVersion`.** The Macro Deck packages float to the newest
+   published version by default, so this usually holds on its own. It stops holding when
+   `MacroDeckSdkVersion` is pinned, or when a build runs against `local-feed/`. A release must never be
+   built against an SDK older than the minimum.
+4. **Only allowed Macro Deck packages are used.** Every package in the graph whose id starts with
+   `MacroDeck.` must match an entry in `allowedMacroDeckPackages`. Anything else under that prefix is
+   refused on upload, including packages from another Macro Deck repository that were never published
+   for plugins.
+5. **The manifest names its author and licence.** `publisher.name` in `manifest.json` must be the
+   owner the plugin is published under in the Creator Portal: the Organization's name, or for a personal
+   Project the creator's username (compared ignoring case). The Store always shows that owner, and an
+   upload whose manifest names anyone else is refused. `license` must be set, at most 64 characters, as
+   an SPDX identifier such as `MIT`; the Store shows it as the plugin's licence. The template's
+   `Example Publisher` is a placeholder and never passes.
+
+Report the result of this gate with every change: which version of the guidelines was checked (the
+`X-Creator-Guidelines-Version` response header), and whether each of the five points holds.
+
 ## The rules that make a plugin clean
 
 ### Identity
