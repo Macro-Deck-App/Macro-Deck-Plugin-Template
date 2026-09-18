@@ -50,9 +50,7 @@
     "name": "Example Publisher"
   },
   "license": "MIT",
-//#if (hasRepository)
   "repository": "https://github.com/example/my-plugin",
-//#endif
 //#if (hasHomepage)
   "homepage": "https://example.com/my-plugin",
 //#endif

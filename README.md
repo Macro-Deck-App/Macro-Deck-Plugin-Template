@@ -35,12 +35,13 @@ dotnet new macrodeck-plugin -n Acme.LightControl --pluginId com.acme.light-contr
 | `--publisher` | `Example Publisher` | `publisher.name` |
 | `--description` | `A minimal Macro Deck 3 plugin.` | `description` |
 | `--license` | `MIT` | `license`, as an SPDX identifier |
-| `--repository` | *(omitted)* | `repository`. Left out of the manifest entirely when not supplied |
+| `--repository` | `https://github.com/example/my-plugin` | `repository`: the GitHub repository the plugin is built from. The Store refuses the placeholder |
 | `--homepage` | *(omitted)* | `homepage`. Left out of the manifest entirely when not supplied |
 | `--platforms` | `win-x64`, `osx-arm64`, `linux-x64` | Which runtime identifiers land in `entrypoints` and `macrodeck-build.json`. Repeat the option per platform; `win-arm64`, `osx-x64` and `linux-arm64` are also available |
 
-`--repository` and `--homepage` are omitted rather than written empty on purpose: the manifest schema
-requires an absolute `http`/`https` URL, so `""` would fail validation.
+`--homepage` is omitted rather than written empty on purpose: the manifest schema requires an absolute
+`http`/`https` URL, so `""` would fail validation. `repository` is always written, because the Macro
+Deck Store refuses an upload without it: set it to the repository the plugin is built in.
 
 The `macrodeck-plugin new` wizard collects the same values and passes them straight through, so
 `dotnet new` and the CLI produce the same project.

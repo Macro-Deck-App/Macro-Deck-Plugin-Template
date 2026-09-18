@@ -15,6 +15,7 @@
     "name": "Example Publisher"
   },
   "license": "MIT",
+  "repository": "https://github.com/example/my-plugin",
   "compatibility": {
     "macroDeck": ">=3.0.0-0"
   }

@@ -56,8 +56,8 @@
     "repository": {
       "type": "parameter",
       "datatype": "string",
-      "description": "The source repository URL. Omitted from the manifest when empty; the schema rejects an empty string.",
-      "defaultValue": "",
+      "description": "The GitHub repository the plugin is built from, written to manifest 'repository'. The Store refuses an upload whose repository is not the one it was built in.",
+      "defaultValue": "https://github.com/example/my-plugin",
       "replaces": "https://github.com/example/my-plugin"
     },
     "homepage": {
@@ -105,10 +105,6 @@
       "datatype": "bool",
       "description": "Skip the automatic restore after the project is created.",
       "defaultValue": "false"
-    },
-    "hasRepository": {
-      "type": "computed",
-      "value": "repository != \"\""
     },
     "hasHomepage": {
       "type": "computed",

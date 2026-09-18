@@ -63,16 +63,17 @@ dotnet new macrodeck-plugin -n <Name> --pluginId <id> --pluginName "<Display nam
 ```
 
 `--publisher`, `--description`, `--license`, `--repository`, `--homepage` and `--platforms` all land in
-`manifest.json` natively, and `--platforms` drives `macrodeck-build.json` with it. `--repository` and
-`--homepage` are omitted rather than written empty when not supplied, because the schema requires an
-absolute URL. `macrodeck-plugin new` collects the same values and passes them through.
+`manifest.json` natively, and `--platforms` drives `macrodeck-build.json` with it. `--homepage` is
+omitted rather than written empty when not supplied, because the schema requires an absolute URL.
+`--repository` is always written and defaults to a placeholder the Store refuses, so pass the real
+one. `macrodeck-plugin new` collects the same values and passes them through.
 
 A repository *cloned* from this template still carries the template's identity, so fix that first, in
 one change:
 
 1. `manifest.json` - `id` (reverse-domain, lowercase, at least two dot-joined kebab segments, e.g.
-   `com.example.my-plugin`), `name`, `version`, `description`, `publisher.name`, and `entrypoints` plus
-   the matching `macrodeck-build.json` targets for the platforms you actually ship.
+   `com.example.my-plugin`), `name`, `version`, `description`, `publisher.name`, `repository`, and
+   `entrypoints` plus the matching `macrodeck-build.json` targets for the platforms you actually ship.
 2. Rename the project, the test project, the solution file and the namespace. The project's
    `AssemblyName` and `RootNamespace` are pinned: the first names the executable, so change it together
    with the `entrypoints` paths - never one without the other, or `macrodeck-plugin build` fails with
@@ -100,7 +101,7 @@ time.
 | Blocked packages (JSON) | <https://api.macro-deck.app/api/v1/public/dependency-policy/blocked-packages> |
 | Minimum SDK version and allowed Macro Deck packages (JSON) | <https://api.macro-deck.app/api/v1/public/dependency-policy/sdk> |
 
-A change is not done until all five hold:
+A change is not done until all six hold:
 
 1. **The plugin follows the Creator Guidelines.** Read the whole document, not just the part that seems
    relevant, and check the change against every rule in it. Where a rule here and the guidelines
@@ -119,15 +120,24 @@ A change is not done until all five hold:
    `MacroDeck.` must match an entry in `allowedMacroDeckPackages`. Anything else under that prefix is
    refused on upload, including packages from another Macro Deck repository that were never published
    for plugins.
-5. **The manifest names its author and licence.** `publisher.name` in `manifest.json` must be the
-   owner the plugin is published under in the Creator Portal: the Organization's name, or for a personal
-   Project the creator's username (compared ignoring case). The Store always shows that owner, and an
-   upload whose manifest names anyone else is refused. `license` must be set, at most 64 characters, as
-   an SPDX identifier such as `MIT`; the Store shows it as the plugin's licence. The template's
-   `Example Publisher` is a placeholder and never passes.
+5. **The manifest names its author, licence and repository.** `publisher.name` in `manifest.json` must
+   be the owner the plugin is published under in the Creator Portal: the Organization's name, or for a
+   personal Project the creator's username (compared ignoring case). The Store always shows that owner,
+   and an upload whose manifest names anyone else is refused. `license` must be set, at most 64
+   characters, as an SPDX identifier such as `MIT`; the Store shows it as the plugin's licence.
+   `repository` must be the GitHub repository the plugin is built and released from, written
+   `https://github.com/<owner>/<name>`; an upload from any other repository is refused. The template's
+   `Example Publisher` and `https://github.com/example/my-plugin` are placeholders and never pass.
+6. **The plugin passes the conformance suite on every platform it declares.** The Store refuses a build
+   that does not come with a conformance report for each platform in `entrypoints`, or whose report shows
+   a failed Required check, never reached the plugin (`MDC0201`, the handshake, did not pass), or is for
+   another plugin id or version. The official publishing workflow runs the suite on a stub host per
+   platform and sends the reports, so never turn its `run-stub-host` off. Before calling a change done,
+   run `macrodeck-plugin test` (see "Verifying a change") and fix every Required failure; a failed
+   Recommended check is allowed but worth fixing.
 
 Report the result of this gate with every change: which version of the guidelines was checked (the
-`X-Creator-Guidelines-Version` response header), and whether each of the five points holds.
+`X-Creator-Guidelines-Version` response header), and whether each of the six points holds.
 
 ## The rules that make a plugin clean
 

@@ -10,8 +10,8 @@ what a clone of this repository contains, minus what `.template.config/template.
 ordinary change to the plugin in `src/`.
 
 The one exception is `.template.config/content/`, which holds conditional variants of `manifest.json`
-and `macrodeck-build.json`. Platform selection and the omission of an unsupplied `repository` or
-`homepage` need `//#if` markers, and a file carrying those is not valid JSON - which would break
+and `macrodeck-build.json`. Platform selection and the omission of an unsupplied `homepage` need
+`//#if` markers, and a file carrying those is not valid JSON - which would break
 `macrodeck-plugin validate` and `build` and the manifest reader for anyone who *clones* the repository
 instead of generating from it. So the files under `src/` stay valid JSON, `template.json` excludes them
 from the first source and maps the variants over them from a second one.
@@ -90,7 +90,7 @@ generate a project and confirm:
 
 - the project, test project, solution file and namespaces all carry the new name,
 - `manifest.json` carries the new `id`, `name`, `publisher.name`, `license` and per-platform
-  `executable` values, and omits `repository`/`homepage` when they were not supplied,
+  `executable` values and `repository`, and omits `homepage` when it was not supplied,
 - `macrodeck-build.json` has a target for exactly the platforms `--platforms` selected, matching
   `entrypoints`,
 - generating with default parameters reproduces `src/MacroDeck.PluginTemplate/manifest.json` and
