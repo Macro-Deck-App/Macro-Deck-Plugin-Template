@@ -31,6 +31,8 @@ jobs:
     name: Publish to NuGet
     needs: ci
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.credentials.outputs.configured }}
     permissions:
       contents: read
       # Lets the job request the OIDC token nuget.org exchanges for a short-lived API key.
@@ -97,3 +99,68 @@ jobs:
               echo "- \`$(basename "${package}")\`"
             done
           } >> "$GITHUB_STEP_SUMMARY"
+
+  notify-discord:
+    name: Notify Discord
+    needs: publish
+    # Only announce a package that was actually pushed.
+    if: ${{ needs.publish.outputs.published == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check Discord webhook
+        id: webhook
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DISCORD_WEBHOOK_URL}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::DISCORD_WEBHOOK_URL is not configured - skipping the Discord announcement."
+
+      - uses: actions/checkout@v5
+        if: ${{ steps.webhook.outputs.configured == 'true' }}
+        with:
+          fetch-depth: 0
+
+      - name: Announce the new template
+        if: ${{ steps.webhook.outputs.configured == 'true' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TAG: ${{ github.ref_name }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          PLUGIN_DEVELOPER_ROLE: '1550148122318086194'
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          previous="$(git tag --list 'v[0-9]*' --sort=-version:refname | grep -vx "${TAG}" | head -n 1 || true)"
+          if [ -n "${previous}" ]; then
+            changes="${REPOSITORY_URL}/compare/${previous}...${TAG}"
+          else
+            changes="${REPOSITORY_URL}/commits/${TAG}"
+          fi
+
+          content="$(cat <<EOF
+          <@&${PLUGIN_DEVELOPER_ROLE}> **The Macro Deck plugin template has been updated to ${version}.**
+
+          Please make sure you:
+          • **Carry the changes over into your existing plugins.** What changed: <${changes}>
+          • **Create new plugins from the updated template** only.
+
+          Update your installed template with:
+          \`dotnet new install MacroDeck.Plugin.Templates::${version}\`
+
+          NuGet: <https://www.nuget.org/packages/MacroDeck.Plugin.Templates/${version}>
+          EOF
+          )"
+
+          jq -n --arg content "${content}" --arg role "${PLUGIN_DEVELOPER_ROLE}" \
+            '{content: $content, allowed_mentions: {parse: [], roles: [$role]}}' \
+            | curl --fail-with-body --silent --show-error \
+                -H 'Content-Type: application/json' \
+                --data-binary @- \
+                "${DISCORD_WEBHOOK_URL}"
